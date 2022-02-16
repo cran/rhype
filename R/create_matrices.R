@@ -1,5 +1,9 @@
 #' Pseudo-Invert a Vector
 #'
+#' Pseudoinversion is where a vector has each non-zero element inverted and each zero
+#' element remains untouched. This is useful for pseudoinverting matrices that only have
+#' non-zero entries on the leading diagonal.
+#'
 #' @param vec A vector of numbers
 #'
 #' @return A vector of pseudo-inverted numbers
@@ -31,6 +35,7 @@ pseudo_invert <- function(vec) {
 #'
 #' @param hype A hypergraph object
 #' @param augment_oriented Whether to augment an oriented hypergraph
+#' @param as_matrix Whether to coerce the result to a simple matrix
 #'
 #' @return An incidence matrix or a list of two incidence matrices.
 #' @export
@@ -41,10 +46,14 @@ pseudo_invert <- function(vec) {
 #'
 #' h2 <- example_hype(oriented = TRUE, directed = TRUE)
 #' incidence_matrix(h2)
-incidence_matrix <- function(hype, augment_oriented = TRUE) {
+incidence_matrix <- function(hype, augment_oriented = TRUE, as_matrix = FALSE) {
   # If the hypergraph has real coefficients then return the saved incidence matrix
   if (hype$get_real_coef()) {
-    return(hype$get_inc_mat())
+    if (as_matrix) {
+      return(as.matrix(hype$get_inc_mat()))
+    } else {
+      return(hype$get_inc_mat())
+    }
   }
 
   # Finding whether the hypergraph is oriented
@@ -54,10 +63,10 @@ incidence_matrix <- function(hype, augment_oriented = TRUE) {
     numv <- hype$get_numv()
     nume <- length(elist)
 
-    # Initialising emtry incidence matrix
+    # Initialising empty incidence matrix
     inc_mat <- list(
-      matrix(0, nrow = numv, ncol = nume),
-      matrix(0, nrow = numv, ncol = nume)
+      Matrix::Matrix(0, nrow = numv, ncol = nume),
+      Matrix::Matrix(0, nrow = numv, ncol = nume)
     )
 
     # Naming the matrices for directed hypergraphs
@@ -85,6 +94,10 @@ incidence_matrix <- function(hype, augment_oriented = TRUE) {
     }
 
     # Returning the incidence matrix
+    if (as_matrix) {
+      inc_mat[[1]] <- as.matrix(inc_mat[[1]])
+      inc_mat[[2]] <- as.matrix(inc_mat[[2]])
+    }
     return(inc_mat)
   } else {
     # Getting basic hypergraph properties
@@ -93,7 +106,7 @@ incidence_matrix <- function(hype, augment_oriented = TRUE) {
     nume <- length(elist)
 
     # Generating an empty incidence matrix
-    inc_mat <- matrix(0, nrow = numv, ncol = nume)
+    inc_mat <- Matrix::Matrix(0, nrow = numv, ncol = nume)
     # Setting row and column names of the incidence matrix
     rownames(inc_mat) <- hype$get_vnames()
     colnames(inc_mat) <- hype$get_enames()
@@ -104,6 +117,9 @@ incidence_matrix <- function(hype, augment_oriented = TRUE) {
     }
 
     # Return the incidence matrix
+    if (as_matrix) {
+      inc_mat <- as.matrix(inc_mat)
+    }
     return(inc_mat)
   }
 }
@@ -124,6 +140,7 @@ incidence_matrix <- function(hype, augment_oriented = TRUE) {
 #' @param hype A hypergraph object
 #' @param normalise Whether the matrix should be normalised to either 1 or 0
 #' @param self_adj Whether self adjacency should be represented
+#' @param as_matrix Whether the output should be coerced into a simple matrix
 #'
 #' @return A matrix of adjacencies between vertices of a hypergraph.
 #' @export
@@ -134,7 +151,7 @@ incidence_matrix <- function(hype, augment_oriented = TRUE) {
 #'
 #' h2 <- example_hype(oriented = TRUE, directed = TRUE)
 #' adjacency_matrix(h2)
-adjacency_matrix <- function(hype, normalise = TRUE, self_adj = TRUE) {
+adjacency_matrix <- function(hype, normalise = TRUE, self_adj = TRUE, as_matrix = FALSE) {
   # Finding the incidence matrix
   inc_mat <- incidence_matrix(hype)
 
@@ -147,9 +164,9 @@ adjacency_matrix <- function(hype, normalise = TRUE, self_adj = TRUE) {
 
   # Finding the adjacency matrix using incidence matrices
   if (hype$get_oriented()) {
-    adj_mat <- inc_mat[[1]] %*% (eweights * t(inc_mat[[2]]))
+    adj_mat <- inc_mat[[1]] %*% (eweights * Matrix::t(inc_mat[[2]]))
   } else {
-    adj_mat <- inc_mat %*% (eweights * t(inc_mat))
+    adj_mat <- inc_mat %*% (eweights * Matrix::t(inc_mat))
   }
 
   # Setting the matrix entries to 0 and 1 if specified
@@ -159,7 +176,7 @@ adjacency_matrix <- function(hype, normalise = TRUE, self_adj = TRUE) {
 
   # Removing the leading diagonal if specified
   if (!self_adj) {
-    diag(adj_mat) <- 0
+    Matrix::diag(adj_mat) <- 0
   }
 
   # Setting row and column names
@@ -167,6 +184,13 @@ adjacency_matrix <- function(hype, normalise = TRUE, self_adj = TRUE) {
   colnames(adj_mat) <- hype$get_vnames()
 
   # Returning the adjacency matrix
+  if (as_matrix) {
+    adj_mat <- as.matrix(adj_mat)
+  } else {
+    # TODO work around for transposing sparse matrix problem. Fix problem and remove.
+    adj_mat <- Matrix::Matrix(adj_mat)
+  }
+
   return(adj_mat)
 }
 
@@ -192,7 +216,7 @@ laplacian_matrix <- function(hype) {
   deg <- apply(adj_mat, 1, sum)
   # Transforming the adjacency matrix into the laplacian matrix
   lap_mat <- -1 * adj_mat
-  diag(lap_mat) <- deg
+  Matrix::diag(lap_mat) <- deg
   # Returning the laplacian matrix
   return(lap_mat)
 }
@@ -218,7 +242,7 @@ vert_norm_lap_mat <- function(hype) {
 
   # Finding the laplacian matrix via the adjacency matrix
   lap_mat <- adjacency_matrix(hype, normalise = FALSE, self_adj = TRUE)
-  lap_mat <- pseudo_invert(diag(lap_mat)) * lap_mat
+  lap_mat <- pseudo_invert(Matrix::diag(lap_mat)) * lap_mat
   # Returning the laplacian matrix
   return(lap_mat)
 }
@@ -244,7 +268,7 @@ hype_norm_lap_mat <- function(hype) {
 
   # Calculating the laplacian matrix
   inc_mat <- incidence_matrix(hype)
-  lap_mat <- t(inc_mat) %*% (pseudo_invert(degree(hype, method = "hyperedge")) * inc_mat)
+  lap_mat <- Matrix::t(inc_mat) %*% (pseudo_invert(degree(hype, method = "hyperedge")) * inc_mat)
   # Returning the laplacian matrix
   return(lap_mat)
 }
