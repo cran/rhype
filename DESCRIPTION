@@ -1,6 +1,6 @@
 Package: rhype
 Title: Work with Hypergraphs in R
-Version: 0.2.0
+Version: 0.3.0
 Authors@R: 
     person("Hugh", "Warden", , "hugh.warden@outlook.com", role = c("aut", "cre"),
            comment = c(ORCID = "0000-0002-4308-7316"))
@@ -11,14 +11,14 @@ Description: Create and manipulate hypergraph objects. This early version of
     of hyperpaths and hypergraph centrality measures.
 License: GPL (>= 3)
 Encoding: UTF-8
-RoxygenNote: 7.1.2
+RoxygenNote: 7.2.1
 Imports: Matrix, R6, RSpectra
 Suggests: spelling, testthat (>= 3.0.0)
 Config/testthat/edition: 3
 Language: en-US
 NeedsCompilation: no
-Packaged: 2022-02-16 20:09:43 UTC; hwarden
+Packaged: 2022-08-06 13:02:40 UTC; hwarden
 Author: Hugh Warden [aut, cre] (<https://orcid.org/0000-0002-4308-7316>)
 Maintainer: Hugh Warden <hugh.warden@outlook.com>
 Repository: CRAN
-Date/Publication: 2022-02-16 20:30:02 UTC
+Date/Publication: 2022-08-06 13:30:02 UTC
